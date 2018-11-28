@@ -9,7 +9,7 @@ import sys
 #from igl_mesh_io import *
 
 
-def Tooth13Dataset(Dataset):
+class Tooth13Dataset(Dataset):
     def __init__(self, root, mode, transform=None):
         if not mode in ['train', 'test']: raise ValueError('Invalid mode')
         

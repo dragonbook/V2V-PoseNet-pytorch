@@ -3,11 +3,6 @@ import os
 import numpy as np
 import sys
 
-#sys.path.append('/home/maiqi/yalong/project/KeyPoint/Code/V2V-PoseNet-pytorch/lib/pyigllib')
-#import pyigl as igl
-#from iglhelpers import *
-#from igl_mesh_io import *
-
 
 class Tooth13Dataset(Dataset):
     def __init__(self, root, mode, transform=None):

@@ -125,12 +125,13 @@ def generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, sizes, d3ou
     return heatmap
 
 
-class InputOutputVoxelization(object):
-    def __init__(self, sizes, pool_factor, std):
+class V2VVoxelization(object):
+    def __init__(self, sizes, pool_factor, std, augmentation=True):
         self.sizes = sizes
         self.cubic_size, self.cropped_size, self.original_size = self.sizes
         self.pool_factor = pool_factor
         self.std = std
+        self.augmentation = augmentation
 
         output_size = self.cropped_size / self.pool_factor
         self.d3outputs = np.meshgrid(np.arange(output_size), np.arange(output_size), np.arange(output_size), indexing='ij')
@@ -148,25 +149,12 @@ class InputOutputVoxelization(object):
         # Translation
         trans = np.random.randint(1, self.original_size-self.cropped_size+1+1, size=3)
 
+        if not self.augmentation:
+            new_size = 100
+            angle = 0
+            trans = self.original_size/2 - self.cropped_size/2 + 1
+
         input = generate_cubic_input(points, refpoint, new_size, angle, trans, self.sizes)
         heatmap = generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, self.sizes, self.d3outputs, self.pool_factor, self.std)
 
         return input, heatmap
-
-
-class InputVoxelization(object):
-    def __init__(self, sizes):
-        self.sizes = sizes
-        self.cubic_size, self.cropped_size, self.original_size = self.sizes
-
-    def __call__(self, sample):
-        points, refpoint = sample['points'], sample['refpoint']
-
-        ## Cancel data augmentations
-        new_size = 100
-        angle = 0
-        trans = self.original_size/2 - self.cropped_size/2 + 1
-
-        input = generate_cubic_input(points, refpoint, new_size, angle, trans, self.sizes)
-
-        return input

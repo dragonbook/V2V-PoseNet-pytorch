@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/maiqi/yalong/project/KeyPoint/Code/V2V-PoseNet-pytorch/lib/pyigllib')
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../lib/pyigllib')
 import pyigl as igl
 from iglhelpers import e2p
 from igl_mesh_io import read_mesh_eigen

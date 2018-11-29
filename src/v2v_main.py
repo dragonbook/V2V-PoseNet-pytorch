@@ -18,7 +18,7 @@ dtype = torch.float
 
 # Data configuration
 print('==> Preparing data ..')
-data_dir = r''
+data_dir = r'/home/maiqi/yalong/dataset/cases-tooth-keypoints/D-11-15-aug/v2v-23-same-ori/split1'
 keypoints_num = 7
 
 

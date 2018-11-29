@@ -138,7 +138,9 @@ def generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, sizes, d3ou
     coord /= pool_factor  # [0, cropped_size/pool_factor]
 
     # heatmap generation
-    heatmap = np.zeros((keypoints.shape[0], cropped_size, cropped_size, cropped_size))
+    output_size = int(cropped_size / pool_factor)
+    heatmap = np.zeros((keypoints.shape[0], output_size, output_size, output_size))
+
     for i in range(coord.shape[0]):
         xi, yi, zi= coord[i]
         heatmap[i] = np.exp(-(np.power((d3output_x+0.5-xi)/std, 2)/2 + \
@@ -156,7 +158,7 @@ class V2VVoxelization(object):
         self.std = 1.7
         self.augmentation = augmentation
 
-        output_size = self.cropped_size / self.pool_factor
+        output_size = int(self.cropped_size / self.pool_factor)
         # Note, range(size) and indexing = 'ij'
         self.d3outputs = np.meshgrid(np.arange(output_size), np.arange(output_size), np.arange(output_size), indexing='ij')
 
@@ -181,4 +183,4 @@ class V2VVoxelization(object):
         input = generate_cubic_input(points, refpoint, new_size, angle, trans, self.sizes)
         heatmap = generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, self.sizes, self.d3outputs, self.pool_factor, self.std)
 
-        return input, heatmap
+        return input.reshape((1, *input.shape)), heatmap

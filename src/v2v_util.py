@@ -5,34 +5,44 @@ import numpy as np
 # TODO:
 # 1. check class PointsVoxelization
 # 2. np or torch?
+# 3. check resize
+
 
 
 def discretize(coord, cropped_size):
+    '''[-1, 1] -> [0, cropped_size]'''
     min_normalized = -1
     max_normalized = 1
     scale = (max_normalized - min_normalized) / cropped_size
-    return np.floor((coord - min_normalized) / scale) 
+    return (coord - min_normalized) / scale 
 
 
 def scattering(coord, cropped_size):
-    mask = (coord[:, 0] >= 1) & (coord[:, 0] <= cropped_size) & \
-           (coord[:, 1] >= 1) & (coord[:, 1] <= cropped_size) & \
-           (coord[:, 2] >= 1) & (coord[:, 2] <= cropped_size)
+    mask = (coord[:, 0] >= 0) & (coord[:, 0] < cropped_size) & \
+           (coord[:, 1] >= 0) & (coord[:, 1] < cropped_size) & \
+           (coord[:, 2] >= 0) & (coord[:, 2] < cropped_size)
 
     coord = coord[mask, :]
 
     cubic = np.zeros((cropped_size, cropped_size, cropped_size))
-    cubic[coord[:, 0] - 1, coord[:, 1] - 1, coord[:, 2] - 1] = 1
+    # Note, directly map point coordinate (x, y, z) to index (i, j, k), instead of (k, j, i)
+    # Need to be consistent with heatmap generating and coordinates extration from heatmap 
+    cubic[coord[:, 0], coord[:, 1], coord[:, 2]] = 1
 
     return cubic
 
 
 def warp2continuous(coord, refpoint, cubic_size, cropped_size):
+    '''
+    [0, cropped_size] -> [-cropped_size/2+refpoint, cropped_size/2 + refpoint]
+    '''
     min_normalized = -1
     max_normalized = 1
 
     scale = (max_normalized - min_normalized) / cropped_size
-    coord = coord * scale + min_normalized + scale / 2
+    # Why need scale/2?
+    #coord = coord * scale + min_normalized + scale / 2  # author's implementation
+    coord = coord * scale + min_normalized
 
     coord = coord * cubic_size / 2 + refpoint
 
@@ -51,7 +61,7 @@ def extract_coord_from_output(output):
     max_index = np.unravel_index(np.argmax(output_rs, axis=1), vsize)
     max_index = np.array(max_index).T
     
-    xyz_output = max_index.reshape([*output.shape[:-3], *vsize]) - 1
+    xyz_output = max_index.reshape([*output.shape[:-3], 3])
 
     return xyz_output
 
@@ -62,20 +72,23 @@ def generate_coord(points, refpoint, new_size, angle, trans, sizes):
     # points shape: (n, 3)
     coord = points
 
-    # normalize
+    # normalize, candidates will lie in range [0, 1]
     coord = (coord - refpoint) / (cubic_size/2)
 
     # discretize
-    coord = discretize(coord, cropped_size)
+    coord = discretize(coord, cropped_size)  # candidates in range [0, cropped_size)
     coord += (original_size / 2 - cropped_size / 2) 
 
     # resize
     if new_size < 100:
         coord = coord / original_size * np.floor(original_size*new_size/100) + \
                 np.floor(original_size/2 - original_size/2*new_size/100)
-    else:
+    elif new_size > 100:
         coord = coord / original_size * np.floor(original_size*new_size/100) - \
                 np.floor(original_size/2*new_size/100 - original_size/2)
+    else:
+        # new_size = 100 if it is in test mode
+        pass
 
     # rotation
     if angle != 0:
@@ -90,6 +103,8 @@ def generate_coord(points, refpoint, new_size, angle, trans, sizes):
         coord[:,1] = original_size-1 - coord[:,1]
 
     # translation
+    # Note, if trans = (original_size/2 - cropped_size/2), the following translation will
+    # cancel the above translation(after discretion). It will be set it when in test mode. 
     coord -= trans - 1
 
     return coord
@@ -100,7 +115,7 @@ def generate_cubic_input(points, refpoint, new_size, angle, trans, sizes):
     coord = generate_coord(points, refpoint, new_size, angle, trans, sizes)
 
     # scattering
-    coord = np.floor(coord + 0.5) + 1
+    coord = coord.astype(np.int32)  # [0, cropped_size)
     cubic = scattering(coord, cropped_size)
 
     return cubic

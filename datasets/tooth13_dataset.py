@@ -6,7 +6,7 @@ import sys
 
 class Tooth13Dataset(Dataset):
     def __init__(self, root, mode, transform=None):
-        if not mode in ['train', 'test']: raise ValueError('Invalid mode')
+        if not mode in ['train', 'val', 'test']: raise ValueError('Invalid mode')
         
         self.mesh_names_file = os.path.join(root, mode + '_names.txt')
         self.keypoints_file = os.path.join(root, mode + '_keypoints.txt')

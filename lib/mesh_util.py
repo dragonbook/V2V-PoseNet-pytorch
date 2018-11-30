@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../lib/pyigllib')
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/pyigllib')
 import pyigl as igl
 from iglhelpers import e2p
 from igl_mesh_io import read_mesh_eigen

@@ -1,6 +1,6 @@
 import torch
 import torch.optim as optim
-from progressbar import progress_bar
+from lib.progressbar import progress_bar
 
 
 def train_epoch(model, criterion, optimizer, train_loader, device=torch.device('cuda'), dtype=torch.float):

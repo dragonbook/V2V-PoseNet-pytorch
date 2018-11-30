@@ -3,6 +3,8 @@ import os
 import numpy as np
 import sys
 
+from lib.mesh_util import read_mesh_vertices
+
 
 class Tooth13Dataset(Dataset):
     def __init__(self, root, mode, transform=None):
@@ -19,7 +21,12 @@ class Tooth13Dataset(Dataset):
     
     def __getitem__(self, index):
         mesh_name = self.mesh_names[index]
-        sample = {'mesh_name': mesh_name, 'keypoints': self.keypoints[index], 'refpoint': self.refpoints[index]}
+        sample = {
+            'mesh_name': mesh_name,
+            'vertices': self.vertices[index],
+            'keypoints': self.keypoints[index],
+            'refpoint': self.refpoints[index]
+        }
 
         if self.transform: sample = self.transform(sample)
 
@@ -38,6 +45,13 @@ class Tooth13Dataset(Dataset):
 
         assert(len(self.mesh_names) == self.keypoints.shape[0])
         assert(len(self.mesh_names) == self.refpoints.shape[0])
+
+        # Pre-load mesh vertices
+        self.vertices = []
+        for name in self.mesh_names:
+            assert(os.path.exists(name))
+            V = read_mesh_vertices(name)
+            self.vertices.append(V)
 
         
     def _check_exists(self):

@@ -189,7 +189,12 @@ class V2VVoxelization(object):
 
         return input.reshape((1, *input.shape)), heatmap
 
-    def evalate(self, heatmaps, refpoints):
+    def voxelize(self, points, refpoint):
+        new_size, angle, trans = 100, 0, self.original_size/2 - self.cropped_size/2 + 1
+        input = generate_cubic_input(points, refpoint, new_size, angle, trans, self.sizes)
+        return input.reshape((1, *input.shape))
+
+    def evaluate(self, heatmaps, refpoints):
         coords = extract_coord_from_output(heatmaps)
         coords *= self.pool_factor
         keypoints = warp2continuous(coords, refpoints, self.cubic_size, self.cropped_size)

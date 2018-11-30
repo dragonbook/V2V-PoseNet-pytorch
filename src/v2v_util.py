@@ -17,6 +17,21 @@ def discretize(coord, cropped_size):
     return (coord - min_normalized) / scale 
 
 
+def warp2continuous(coord, refpoint, cubic_size, cropped_size):
+    '''
+    Map coordinates in set [0, 1, .., cropped_size-1] to original range [-cropped_size/2+refpoint, cropped_size/2 + refpoint]
+    '''
+    min_normalized = -1
+    max_normalized = 1
+
+    scale = (max_normalized - min_normalized) / cropped_size
+    coord = coord * scale + min_normalized  # -> [-1, 1]
+
+    coord = coord * cubic_size / 2 + refpoint
+
+    return coord
+
+
 def scattering(coord, cropped_size):
     # coord: [0, cropped_size]
     # Assign range[0, 1) -> 0, [1, 2) -> 1, .. [cropped_size-1, cropped_size) -> cropped_size-1
@@ -38,28 +53,10 @@ def scattering(coord, cropped_size):
     return cubic
 
 
-def warp2continuous(coord, refpoint, cubic_size, cropped_size):
-    '''
-    Map coordinates in set [0, 1, .., cropped_size-1] to range [-cropped_size/2+refpoint, cropped_size/2 + refpoint]
-    '''
-    # Note discrete coord can represents real range [coord, coord+1), see function scattering() 
-    # So, move coord to range center for better fittness
-    coord += 0.5
-
-    min_normalized = -1
-    max_normalized = 1
-
-    scale = (max_normalized - min_normalized) / cropped_size
-    coord = coord * scale + min_normalized  # -> [-1, 1]
-
-    coord = coord * cubic_size / 2 + refpoint
-
-    return coord
-
-
-def extract_coord_from_output(output):
+def extract_coord_from_output(output, center=True):
     '''
     output: shape (batch, jointNum, volumeSize, volumeSize, volumeSize)
+    center: if True, add 0.5, default is true
     return: shape (batch, jointNum, 3)
     '''
     assert(len(output.shape) >= 3)
@@ -70,6 +67,10 @@ def extract_coord_from_output(output):
     max_index = np.array(max_index).T
     
     xyz_output = max_index.reshape([*output.shape[:-3], 3])
+
+    # Note discrete coord can represents real range [coord, coord+1), see function scattering() 
+    # So, move coord to range center for better fittness
+    if center: xyz_output = xyz_output + 0.5
 
     return xyz_output
 
@@ -141,11 +142,14 @@ def generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, sizes, d3ou
     output_size = int(cropped_size / pool_factor)
     heatmap = np.zeros((keypoints.shape[0], output_size, output_size, output_size))
 
+    # use center of cell
+    center_offset = 0.5
+
     for i in range(coord.shape[0]):
         xi, yi, zi= coord[i]
-        heatmap[i] = np.exp(-(np.power((d3output_x+0.5-xi)/std, 2)/2 + \
-            np.power((d3output_y+0.5-yi)/std, 2)/2 + \
-            np.power((d3output_z+0.5-zi)/std, 2)/2))  # +0.5, move coordinate to range center
+        heatmap[i] = np.exp(-(np.power((d3output_x+center_offset-xi)/std, 2)/2 + \
+            np.power((d3output_y+center_offset-yi)/std, 2)/2 + \
+            np.power((d3output_z+center_offset-zi)/std, 2)/2))  # +0.5, move coordinate to range center
 
     return heatmap
 
@@ -184,3 +188,9 @@ class V2VVoxelization(object):
         heatmap = generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, self.sizes, self.d3outputs, self.pool_factor, self.std)
 
         return input.reshape((1, *input.shape)), heatmap
+
+    def evalate(self, heatmaps, refpoints):
+        coords = extract_coord_from_output(heatmaps)
+        coords *= self.pool_factor
+        keypoints = warp2continuous(coords, refpoints, self.cubic_size, self.cropped_size)
+        return keypoints

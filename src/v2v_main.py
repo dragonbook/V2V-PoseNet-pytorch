@@ -19,10 +19,19 @@ dtype = torch.float
 # Data configuration
 print('==> Preparing data ..')
 data_dir = r'/home/maiqi/yalong/dataset/cases-tooth-keypoints/D-11-15-aug/v2v-23-same-ori/split1'
+dataset_scale = 10
 keypoints_num = 7
 
 
 # Transformation
+def apply_dataset_scale(x):
+    if isinstance(x, tuple):
+        for e in x: e *= dataset_scale
+    else: x *= dataset_scale
+
+    return x
+
+
 def to_tensor(x):
     return torch.from_numpy(x)
 
@@ -32,6 +41,8 @@ def transform_train(sample):
     assert(keypoints.shape[0] == keypoints_num)
 
     vertices = read_mesh_vertices(mesh_name)
+
+    vertices, keypoints, refpoint = apply_dataset_scale((vertices, keypoints, refpoint))
 
     voxelization_train = V2VVoxelization()
     input, heatmap = voxelization_train({'points': vertices, 'keypoints': keypoints, 'refpoint': refpoint})
@@ -44,6 +55,8 @@ def transform_val(sample):
     assert(keypoints.shape[0] == keypoints_num)
 
     vertices = read_mesh_vertices(mesh_name)
+
+    vertices, keypoints, refpoint = apply_dataset_scale((vertices, keypoints, refpoint))
 
     voxelization_val = V2VVoxelization()
     input, heatmap = voxelization_val({'points': vertices, 'keypoints': keypoints, 'refpoint': refpoint})

@@ -19,7 +19,7 @@ def discretize(coord, cropped_size):
 
 def warp2continuous(coord, refpoint, cubic_size, cropped_size):
     '''
-    Map coordinates in set [0, 1, .., cropped_size-1] to original range [-cropped_size/2+refpoint, cropped_size/2 + refpoint]
+    Map coordinates in set [0, 1, .., cropped_size-1] to original range [-cubic_size/2+refpoint, cubic_size/2 + refpoint]
     '''
     min_normalized = -1
     max_normalized = 1

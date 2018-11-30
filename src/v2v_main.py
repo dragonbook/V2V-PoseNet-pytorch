@@ -81,7 +81,7 @@ optimizer = optim.RMSprop(net.parameters(), lr=2.5e-4)
 
 ## Train and validate
 print('Start train ..')
-for epoch in range(2):
+for epoch in range(200):
     print('Epoch: {}'.format(epoch))
     train_epoch(net, criterion, optimizer, train_loader, device=device, dtype=dtype)
     val_epoch(net, criterion, val_loader, device=device, dtype=dtype)
@@ -103,7 +103,7 @@ def test(model, test_loader, output_transform, device=torch.device('cuda'), dtyp
             refpoints = refpoints.cpu().numpy()
 
             # (batch, keypoints_num, 3)
-            keypoints_batch = output_transform(outputs, refpoints)
+            keypoints_batch = output_transform((outputs, refpoints))
 
             if keypoints is None:
                 # Initialize keypoints until dimensions awailable now
@@ -117,7 +117,21 @@ def test(model, test_loader, output_transform, device=torch.device('cuda'), dtyp
     return keypoints
    
 
+def remove_dataset_scale(x):
+    if isinstance(x, tuple):
+        for e in x: e /= dataset_scale
+    else: x /= dataset_scale
+
+    return x
+
+
 voxelization_test = voxelization_train
+
+def output_transform(x):
+    heatmaps, refpoints = x
+    keypoints = voxelization_test.evaluate(heatmaps, refpoints)
+    return remove_dataset_scale(keypoints)
+
 
 def transform_test(sample):
     vertices, refpoint = sample['vertices'], sample['refpoint']
@@ -129,8 +143,6 @@ def transform_test(sample):
 test_set = Tooth13Dataset(root=data_dir, mode='test', transform=transform_test)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=1, shuffle=False, num_workers=6)
 
-output_transform = voxelization_test.evaluate
-         
 print('Start test ..')
 keypoints_estimate = test(net, test_loader, output_transform, device, dtype)
 
@@ -139,5 +151,15 @@ print('Write result to ', test_res_filename)
 # Reshape one sample keypoints in one line
 result = keypoints_estimate.reshape(keypoints_estimate.shape[0], -1)
 np.savetxt(test_res_filename, result, fmt='%0.4f')
+
+
+print('Start save fit ..')
+fit_set = Tooth13Dataset(root=data_dir, mode='train', transform=transform_test)
+fit_loader = torch.utils.data.DataLoader(fit_set, batch_size=1, shuffle=False, num_workers=6)
+keypoints_fit = test(net, fit_loader, output_transform)
+fit_res_filename = r'./fit_res.txt'
+print('Write fit result to ', fit_res_filename)
+fit_result = keypoints_fit.reshape(keypoints_fit.shape[0], -1)
+np.savetxt(fit_res_filename, fit_result, fmt='%0.4f')
 
 print('All done ..')

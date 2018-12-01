@@ -55,6 +55,13 @@ class Pool3DBlock(nn.Module):
     
 
 class Upsample3DBlock(nn.Module):
+    '''
+    Note, the original torch implementation can be implemented in pytorch as:
+    'upsample = nn.ConvTranspose3d(1, 1, kernel_size=2, stride=2, padding=0.5, output_padding=1'
+    But the padding value is float, and there will be an error in environment pytorch-0.4.1 + python36. Note, It
+    may work with python2.7?
+    So, I impelment it with kernel = 3 instead.
+    '''
     def __init__(self, in_planes, out_planes, kernel_size, stride):
         super(Upsample3DBlock, self).__init__()
         assert(kernel_size == 3)
@@ -130,10 +137,21 @@ class V2VModel(nn.Module):
 
         self.output_layer = Basic3DBlock(32, output_channels, 1)
 
+        self._initialize_weights()
+
     def forward(self, x):
         x = self.front_layers(x)
         x = self.encoder_decoder(x)
         x = self.back_layers(x)
         x = self.output_layer(x)
         return x
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv3d):
+                nn.init.normal_(m.weight, 0, 0.001)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.ConvTranspose3d):
+                nn.init.normal_(m.weight, 0, 0.001)
+                nn.init.constant_(m.bias, 0)
 

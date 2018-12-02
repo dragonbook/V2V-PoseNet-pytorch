@@ -51,23 +51,38 @@ class Pool3DBlock(nn.Module):
         self.pool_size = pool_size
     
     def forward(self, x):
-        return F.max_pool3d(x, self.pool_size, self.pool_size)
+        return F.max_pool3d(x, kernel_size=self.pool_size, stride=self.pool_size)
     
 
+# class Upsample3DBlock(nn.Module):
+#     '''
+#     Note, the original torch implementation can be implemented in pytorch as:
+#     'upsample = nn.ConvTranspose3d(1, 1, kernel_size=2, stride=2, padding=0.5, output_padding=1'
+#     But the padding value is float, and there will be an error in environment pytorch-0.4.1 + python36. Note, It
+#     may work with python2.7?
+#     So, I impelment it with kernel = 3 instead.
+#     '''
+#     def __init__(self, in_planes, out_planes, kernel_size, stride):
+#         super(Upsample3DBlock, self).__init__()
+#         assert(kernel_size == 3)
+#         assert(stride == 2)
+#         self.block = nn.Sequential(
+#             nn.ConvTranspose3d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=1, output_padding=1),
+#             nn.BatchNorm3d(out_planes),
+#             nn.ReLU(True)
+#         )
+
+#     def forward(self, x):
+#         return self.block(x)
+
+
 class Upsample3DBlock(nn.Module):
-    '''
-    Note, the original torch implementation can be implemented in pytorch as:
-    'upsample = nn.ConvTranspose3d(1, 1, kernel_size=2, stride=2, padding=0.5, output_padding=1'
-    But the padding value is float, and there will be an error in environment pytorch-0.4.1 + python36. Note, It
-    may work with python2.7?
-    So, I impelment it with kernel = 3 instead.
-    '''
     def __init__(self, in_planes, out_planes, kernel_size, stride):
         super(Upsample3DBlock, self).__init__()
-        assert(kernel_size == 3)
+        assert(kernel_size == 2)
         assert(stride == 2)
         self.block = nn.Sequential(
-            nn.ConvTranspose3d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=1, output_padding=1),
+            nn.ConvTranspose3d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=0, output_padding=0),
             nn.BatchNorm3d(out_planes),
             nn.ReLU(True)
         )
@@ -88,9 +103,9 @@ class EncoderDecorder(nn.Module):
         self.mid_res = Res3DBlock(128, 128)
 
         self.decoder_res2 = Res3DBlock(128, 128)
-        self.decoder_upsample2 = Upsample3DBlock(128, 64, 3, 2)
+        self.decoder_upsample2 = Upsample3DBlock(128, 64, 2, 2)
         self.decoder_res1 = Res3DBlock(64, 64)
-        self.decoder_upsample1 = Upsample3DBlock(64, 32, 3, 2)
+        self.decoder_upsample1 = Upsample3DBlock(64, 32, 2, 2)
 
         self.skip_res1 = Res3DBlock(32, 32)
         self.skip_res2 = Res3DBlock(64, 64)
@@ -135,7 +150,7 @@ class V2VModel(nn.Module):
             Basic3DBlock(32, 32, 1),
         )
 
-        self.output_layer = Basic3DBlock(32, output_channels, 1)
+        self.output_layer = nn.Conv3d(32, output_channels, kernel_size=1, stride=1, padding=0)
 
         self._initialize_weights()
 

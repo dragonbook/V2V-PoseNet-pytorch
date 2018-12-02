@@ -194,6 +194,11 @@ class V2VVoxelization(object):
         input = generate_cubic_input(points, refpoint, new_size, angle, trans, self.sizes)
         return input.reshape((1, *input.shape))
 
+    def generate_heatmap(self, keypoints, refpoint):
+        new_size, angle, trans = 100, 0, self.original_size/2 - self.cropped_size/2 + 1
+        heatmap = generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, self.sizes, self.d3outputs, self.pool_factor, self.std)
+        return heatmap
+
     def evaluate(self, heatmaps, refpoints):
         coords = extract_coord_from_output(heatmaps)
         coords *= self.pool_factor

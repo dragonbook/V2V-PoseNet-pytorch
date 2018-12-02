@@ -88,11 +88,20 @@ loss值较高，却不下降，那有可能是梯度消失问题。特别是多�
 
 
 --12.2--
-1. [todo]查找为什么cudnn不行（但cudnn+double可以），可能是某些层的实现精度有问题？或者是这个网络比较复杂，且
+1. [closed]查找为什么cudnn不行（但cudnn+double可以），可能是某些层的实现精度有问题？或者是这个网络比较复杂，且
 某些层有问题，导致梯度消失或爆炸？ cpu+float呢?
+- 应该是batchnorm+cudnn的问题
 
 2. [todo]dataset为什么没有被scale影响
 
 3. [todo]目前能拟合单个样本，尝试逐步增进到原始问题的难度
 - 与作者的实现做对比验证
+
+4. [closed]cuda比cudnn多了几倍的现存消耗？
+- 考虑是否能安装新版本的的cuda, cudnn以及pytorch解决上述问题
+- 关闭掉cudnn for batchnorm能够正常工作
+- [todo] pytorch上提一个issue
+
+5. val_epoch()时，除了返回loss(MSELoss()), 增加计算acc，例如只在volume坐标系内，计算OKS, PKS等
+- 因为mse loss变化较小，需要转换到关键点上（求max())
 

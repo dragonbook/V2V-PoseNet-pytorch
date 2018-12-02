@@ -14,6 +14,9 @@ from v2v_model import V2VModel
 import numpy as np
 
 
+print('Warning: disable cudnn for batchnorm first, or just use only cuda instead!')
+
+
 #torch.random.seed(1)
 np.random.seed(1)
 torch.manual_seed(1)
@@ -98,11 +101,10 @@ net = V2VModel(input_channels=1, output_channels=keypoints_num)
 
 net = net.to(device, dtype)
 if device == 'cuda':
-    torch.backends.cudnn.enabled = False
-    #cudnn.benchmark = True
-    #cudnn.deterministic = True
-    print('backends: ', torch.backends.cudnn.enabled)
-    print('version: ', torch.backends.cudnn.version())
+    #torch.backends.cudnn.enabled = False
+    torch.backends.cudnn.enabled = True
+    cudnn.benchmark = True
+    print('cudnn.backends: ', torch.backends.cudnn.enabled)
 
 
 class Criterion(nn.Module):

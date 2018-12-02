@@ -1,0 +1,11 @@
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/654.obj
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/655.obj
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/656.obj
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/657.obj
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/658.obj
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/659.obj
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/660.obj
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/661.obj
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/663.obj
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/665.obj
+/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/dataset1/667.obj

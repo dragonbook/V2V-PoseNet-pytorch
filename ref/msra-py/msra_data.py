@@ -14,9 +14,9 @@ msra_data_config = {
     'joint_num': 21,
     'world_dim': 3,
 
-    'db_dir': '/home/maiqi/yalong/dataset/cvpr15_MSRAHandGestureDB',
-    'result_dir': '/home/maiqi/yalong/project/KeyPoint/Code/V2V-PoseNet_RELEASE/data-result/MSRA-result',
-    'center_dir': '/home/maiqi/yalong/project/KeyPoint/Code/V2V-PoseNet_RELEASE/data-result/MSRA-result/center',
+    'db_dir': '/home/yalong/yalong/dataset/cvpr15_MSRAHandGestureDB',
+    'result_dir': '',
+    'center_dir': '/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/datasets/msra_center/',
 
     'folder_list': ['1','2','3','4','5','6','7','8','9','I','IP','L','MP','RP','T','TIP','Y'],
     'subject_num': 9,
@@ -50,6 +50,9 @@ def init_msra_data_config():
             
     msra_data_config['train_size'] = train_size
     msra_data_config['test_size'] = test_size
+
+    print('train_size: ', train_size)
+    print('test_size: ', test_size)
 
 
 # Initialize some fields of msra data configuration
@@ -178,6 +181,20 @@ def load_data(db_type):
     print('file_id: {}'.format(file_id))
     print('frame_id: {}'.format(frame_id))
     return joint_world, ref_pt, name
+
+
+jw, rp, names = load_data('train')
+print('train data: ')
+print('#jw: ', jw.shape)
+print('#rp: ', rp.shape)
+print('#nm: ', len(names))
+
+jw, rp, names = load_data('test')
+print('test data: ')
+print('#jw: ', jw.shape)
+print('#rp: ', rp.shape)
+print('#nm: ', len(names))
+
 
 
 def depthmap2cloud(image):

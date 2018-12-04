@@ -1,13 +1,51 @@
-from torch.utils.data import Dataset
 import os
 import numpy as np
 import sys
+import struct
+from torch.utils.data import Dataset
 
 
-# TODO: implement MSRAHandDataset class
-# (1) test
-# (2) load depth image, pixel2world and world to pixel etc
-#
+def pixel2world(x, y, z, img_width, img_height, fx, fy):
+    w_x = (x - img_width / 2) * z / fx
+    w_y = (img_height / 2 - y) * z / fy
+    w_z = z
+    return w_x, w_y, w_z
+
+
+def world2pixel(x, y, z, img_width, img_height, fx, fy):
+    p_x = x * fx / z + img_width / 2
+    p_y = img_height / 2 - y * fy / z
+    return p_x, p_y
+
+
+def depthmap2points(image, fx, fy):
+    h, w = image.shape
+    x, y = np.meshgrid(np.arange(w) + 1, np.arange(h) + 1)
+    points = np.zeros((h, w, 3), dtype=np.float32)
+    points[:,:,0], points[:,:,1], points[:,:,2] = pixel2world(x, y, image, w, h, fx, fy)
+    return points
+
+
+def points2pixels(points, img_width, img_height, fx, fy):
+    pixels = np.zeros((points.shape[0], 2))
+    pixels[:, 0], pixels[:, 1] = \
+        world2pixel(points[:,0], points[:, 1], points[:, 2], img_width, img_height, fx, fy)
+    return pixels
+
+
+def load_depthmap(filename, img_width, img_height, max_depth):
+    with open(filename, mode='rb') as f:
+        data = f.read()
+        _, _, left, top, right, bottom = struct.unpack('I'*6, data[:6*4])
+        num_pixel = (right - left) * (bottom - top)
+        cropped_image = struct.unpack('f'*num_pixel, data[6*4:])
+
+        cropped_image = np.asarray(cropped_image).reshape(bottom-top, -1)
+        depth_image = np.zeros((img_height, img_width), dtype=np.float32)
+        depth_image[top:bottom, left:right] = cropped_image
+        depth_image[depth_image == 0] = max_depth
+
+        return depth_image
 
 
 class MARAHandDataset(Dataset):
@@ -37,10 +75,15 @@ class MARAHandDataset(Dataset):
         self._load()
     
     def __getitem__(self, index):
+        depthmap = load_depthmap(self.names[index], self.img_width, self.img_height, self.max_depth)
+        points = depthmap2points(depthmap, self.fx, self.fy)
+        points = points.reshape((-1, 3))
+
         sample = {
             'name': self.names[index],
-            'joint_world': self.joints_world[index],
-            'ref_pt': self.ref_pts[index]
+            'points': points,
+            'joints': self.joints_world[index],
+            'refpoint': self.ref_pts[index]
         }
 
         if self.transform: sample = self.transform(sample)
@@ -72,40 +115,41 @@ class MARAHandDataset(Dataset):
         for mid in range(self.subject_num):
             if self.mode == 'train': model_chk = (mid != self.test_subject_id)
             elif self.mode == 'test': model_chk = (mid == self.test_subject_id)
-        
+            else: raise RuntimeError('unsupported mode {}'.format(self.mode))
+            
             if model_chk:
                 for fd in self.folder_list:
                     annot_file = os.path.join(self.root, 'P'+str(mid), fd, 'joint.txt')
 
-                lines = []
-                with open(annot_file) as f:
-                    lines = [line.rstrip() for line in f]
+                    lines = []
+                    with open(annot_file) as f:
+                        lines = [line.rstrip() for line in f]
 
-                # skip first line
-                for i in range(1, len(lines)):
-                    # referece point
-                    splitted = ref_pt_str[file_id].split()
-                    if splitted[0] == 'invalid':
-                        print('Warning: found invalid reference frame')
+                    # skip first line
+                    for i in range(1, len(lines)):
+                        # referece point
+                        splitted = ref_pt_str[file_id].split()
+                        if splitted[0] == 'invalid':
+                            print('Warning: found invalid reference frame')
+                            file_id += 1
+                            continue
+                        else:
+                            self.ref_pts[frame_id, 0] = float(splitted[0])
+                            self.ref_pts[frame_id, 1] = float(splitted[1])
+                            self.ref_pts[frame_id, 2] = float(splitted[2])
+
+                        # joint point
+                        splitted = lines[i].split()
+                        for jid in range(self.joint_num):
+                            self.joints_world[frame_id, jid, 0] = float(splitted[jid * self.world_dim])
+                            self.joints_world[frame_id, jid, 1] = float(splitted[jid * self.world_dim + 1])
+                            self.joints_world[frame_id, jid, 2] = -float(splitted[jid * self.world_dim + 2])
+                        
+                        filename = os.path.join(self.root, 'P'+str(mid), fd, '{:0>6d}'.format(i-1) + '_depth.bin')
+                        self.names.append(filename)
+
+                        frame_id += 1
                         file_id += 1
-                        continue
-                    else:
-                        self.ref_pts[frame_id, 0] = float(splitted[0])
-                        self.ref_pts[frame_id, 1] = float(splitted[1])
-                        self.ref_pts[frame_id, 2] = float(splitted[2])
-
-                    # joint point
-                    splitted = lines[i].split()
-                    for jid in range(self.joint_num):
-                        self.joints_world[frame_id, jid, 0] = float(splitted[jid * self.world_dim])
-                        self.joints_world[frame_id, jid, 1] = float(splitted[jid * self.world_dim + 1])
-                        self.joints_world[frame_id, jid, 2] = -float(splitted[jid * self.world_dim + 2])
-                    
-                    filename = os.path.join(self.root, 'P'+str(mid), fd, '{:0>6d}'.format(i-1) + '_depth.bin')
-                    self.names.append(filename)
-
-                    frame_id += 1
-                    file_id += 1
 
     def _compute_dataset_size(self):
         self.train_size, self.test_size = 0, 0
@@ -137,7 +181,3 @@ class MARAHandDataset(Dataset):
                 return False
 
         return True
-
-
-
-

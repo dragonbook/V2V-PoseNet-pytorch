@@ -1,209 +1,212 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
-from torch.utils.data import sampler
+import argparse
+import os
 
-from lib.solver import train_epoch, val_epoch
-from lib.mesh_util import read_mesh_vertices
-from datasets.tooth13_dataset import Tooth13Dataset
-
-from v2v_util import V2VVoxelization
-from v2v_model import V2VModel
-
-import numpy as np
+from lib.solver import train_epoch, val_epoch, test_epoch
+from lib.sampler import ChunkSampler
+from src.v2v_model import V2VModel
+from src.v2v_util import V2VVoxelization
+from datasets.msra_hand import MARAHandDataset
 
 
+#######################################################################################
+## Some helpers
+def parse_args():
+    parser = argparse.ArgumentParser(description='PyTorch Hand Keypoints Estimation Training')
+    #parser.add_argument('--resume', 'r', action='store_true', help='resume from checkpoint')
+    parser.add_argument('--resume', '-r', default=-1, type=int, help='resume after epoch')
+    args = parser.parse_args()
+    return args
+
+
+#######################################################################################
+## Configurations
 print('Warning: disable cudnn for batchnorm first, or just use only cuda instead!')
-
-
-#torch.random.seed(1)
 np.random.seed(1)
 torch.manual_seed(1)
 torch.cuda.manual_seed(1)
 
-
-# Basic configuration
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 dtype = torch.float
-#dtype = torch.double
+
+#
+args = parse_args()
+resume_train = args.resume >= 0
+resume_after_epoch = args.resume
+
+save_checkpoint = True
+checkpoint_per_epochs = 5
+checkpoint_dir = r'./checkpoint'
+
+start_epoch = 0
+epochs_num = 21
 
 
-# Data configuration
+#######################################################################################
+## Data, transform, dataset and loader
+# Data
 print('==> Preparing data ..')
-data_dir = r'/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/experiments/tooth/exp1/split1/'
-dataset_scale = 10
-keypoints_num = 7
+data_dir = r'/home/yalong/yalong/dataset/cvpr15_MSRAHandGestureDB'
+center_dir = r'/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/datasets/msra_center/'
+keypoints_num = 21
+test_subject_id = 3
 
 
-# Transformation
-def apply_dataset_scale(x):
-    if isinstance(x, tuple):
-        for e in x: e *= dataset_scale
-    else: x *= dataset_scale
-
-    return x
-
-
-def to_tensor(x):
-    return torch.from_numpy(x)
-
-
+# Transform
 voxelization_train = V2VVoxelization(augmentation=True)
 voxelization_val = V2VVoxelization(augmentation=False)
 
 
-class ChunkSampler(sampler.Sampler):
-    def __init__(self, num_samples, start=0):
-        self.num_samples = num_samples
-        self.start = start
-
-    def __iter__(self):
-        return iter(range(self.start, self.start + self.num_samples))
-
-    def __len__(self):
-        return self.num_samples
-
-
 def transform_train(sample):
-    vertices, keypoints, refpoint = sample['vertices'].copy(), sample['keypoints'].copy(), sample['refpoint'].copy()
+    points, keypoints, refpoint = sample['points'], sample['joints'], sample['refpoint']
     assert(keypoints.shape[0] == keypoints_num)
-
-    vertices, keypoints, refpoint = apply_dataset_scale((vertices, keypoints, refpoint))
-    input, heatmap = voxelization_train({'points': vertices, 'keypoints': keypoints, 'refpoint': refpoint})
-
-    return (to_tensor(input), to_tensor(heatmap))
+    input, heatmap = voxelization_train({'points': points, 'keypoints': keypoints, 'refpoint': refpoint})
+    return (torch.from_numpy(input), torch.from_numpy(heatmap))
 
 
 def transform_val(sample):
-    #vertices, keypoints, refpoint = sample['vertices'], sample['keypoints'], sample['refpoint']
-    vertices, keypoints, refpoint = sample['vertices'].copy(), sample['keypoints'].copy(), sample['refpoint'].copy()
+    points, keypoints, refpoint = sample['points'], sample['joints'], sample['refpoint']
     assert(keypoints.shape[0] == keypoints_num)
-
-    vertices, keypoints, refpoint = apply_dataset_scale((vertices, keypoints, refpoint))
-    input, heatmap = voxelization_val({'points': vertices, 'keypoints': keypoints, 'refpoint': refpoint})
-
-    return (to_tensor(input), to_tensor(heatmap))
+    input, heatmap = voxelization_val({'points': points, 'keypoints': keypoints, 'refpoint': refpoint})
+    return (torch.from_numpy(input), torch.from_numpy(heatmap))
 
 
-# Datasets
-train_set = Tooth13Dataset(root=data_dir, mode='train', transform=transform_train)
-train_num = 1
-#train_loader = torch.utils.data.DataLoader(train_set, batch_size=1, shuffle=False, num_workers=6,sampler=ChunkSampler(train_num, 0))
+# Dataset and loader
+train_set = MARAHandDataset(data_dir, center_dir, 'train', test_subject_id, transform_train)
 train_loader = torch.utils.data.DataLoader(train_set, batch_size=1, shuffle=True, num_workers=6)
+#train_num = 1
+#train_loader = torch.utils.data.DataLoader(train_set, batch_size=1, shuffle=False, num_workers=6,sampler=ChunkSampler(train_num, 0))
 
-val_set = Tooth13Dataset(root=data_dir, mode='val', transform=transform_val)
+# No separate validation dataset, just use test dataset instead
+val_set = MARAHandDataset(data_dir, center_dir, 'test', test_subject_id, transform_val)
 val_loader = torch.utils.data.DataLoader(val_set, batch_size=1, shuffle=False, num_workers=6)
 
 
-# Model, criterion and optimizer
+#######################################################################################
+## Model, criterion and optimizer
+print('==> Constructing model ..')
 net = V2VModel(input_channels=1, output_channels=keypoints_num)
 
 net = net.to(device, dtype)
-if device == 'cuda':
-    #torch.backends.cudnn.enabled = False
+if device == torch.device('cuda'):
     torch.backends.cudnn.enabled = True
     cudnn.benchmark = True
-    print('cudnn.backends: ', torch.backends.cudnn.enabled)
-
-
-class Criterion(nn.Module):
-    def __init__(self):
-        super(Criterion, self).__init__()
-
-    def forward(self, outputs, targets):
-        # Assume batch = 1
-        return ((outputs - targets)**2).mean()
-
+    print('cudnn.enabled: ', torch.backends.cudnn.enabled)
 
 criterion = nn.MSELoss()
-#criterion = Criterion()
-#optimizer = optim.RMSprop(net.parameters(), lr=2.5e-4)
+
 optimizer = optim.Adam(net.parameters())
-#optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+#optimizer = optim.RMSprop(net.parameters(), lr=2.5e-4)
 
 
-## Train and validate
-print('Start train ..')
-for epoch in range(50):
+#######################################################################################
+## Resume
+if resume_train:
+    # Load checkpoint
+    epoch = resume_after_epoch
+    checkpoint_file = os.path.join(checkpoint_dir, 'epoch'+str(epoch)+'.pth')
+
+    print('==> Resuming from checkpoint after epoch {} ..'.format(epoch))
+    assert os.path.isdir(checkpoint_dir), 'Error: no checkpoint directory found!'
+    assert os.path.isfile(checkpoint_file), 'Error: no checkpoint file of epoch {}'.format(epoch)
+
+    checkpoint = torch.load(os.path.join(checkpoint_dir, 'epoch'+str(epoch)+'.pth'))
+    net.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    start_epoch = checkpoint['epoch'] + 1
+
+
+#######################################################################################
+## Train and Validate
+print('==> Training ..')
+for epoch in range(start_epoch, start_epoch + epochs_num):
     print('Epoch: {}'.format(epoch))
     train_epoch(net, criterion, optimizer, train_loader, device=device, dtype=dtype)
-    #val_epoch(net, criterion, val_loader, device=device, dtype=dtype)
+    val_epoch(net, criterion, val_loader, device=device, dtype=dtype)
+
+    if save_checkpoint and epoch % checkpoint_per_epochs == 0:
+        if not os.path.exists(checkpoint_dir): os.mkdir(checkpoint_dir)
+        checkpoint_file = os.path.join(checkpoint_dir, 'epoch'+str(epoch)+'.pth')
+        checkpoint = {
+            'model_state_dict': net.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'epoch': epoch
+        }
+        torch.save(checkpoint, checkpoint_file)
 
 
-# Test
-def test(model, test_loader, output_transform, device=torch.device('cuda'), dtype=torch.float):
-    model.eval()
-
-    samples_num = len(test_loader)
-    keypoints = None
-    idx = 0
-
-    with torch.no_grad():
-        for batch_idx, (inputs, refpoints) in enumerate(test_loader):
-            outputs = model(inputs.to(device, dtype))
-
-            outputs = outputs.cpu().numpy()
-            refpoints = refpoints.cpu().numpy()
-
-            # (batch, keypoints_num, 3)
-            keypoints_batch = output_transform((outputs, refpoints))
-
-            if keypoints is None:
-                # Initialize keypoints until dimensions awailable now
-                keypoints = np.zeros((samples_num, *keypoints_batch.shape[1:]))
-
-            batch_size = keypoints_batch.shape[0]
-            keypoints[idx:idx+batch_size] = keypoints_batch
-            idx += batch_size
-
-
-    return keypoints
-   
-
-def remove_dataset_scale(x):
-    if isinstance(x, tuple):
-        for e in x: e /= dataset_scale
-    else: x /= dataset_scale
-
-    return x
-
-
-voxelization_test = voxelization_train
-
-def output_transform(x):
-    heatmaps, refpoints = x
-    keypoints = voxelization_test.evaluate(heatmaps, refpoints)
-    return remove_dataset_scale(keypoints)
+#######################################################################################
+## Test
+print('==> Testing ..')
+voxelize_input = voxelization_train.voxelize
+evaluate_keypoints = voxelization_train.evaluate
 
 
 def transform_test(sample):
-    vertices, refpoint = sample['vertices'], sample['refpoint']
-    vertices, refpoint = apply_dataset_scale((vertices, refpoint))
-    input = voxelization_test.voxelize(vertices, refpoint)
-    return to_tensor(input), to_tensor(refpoint.reshape((1, -1)))
+    points, refpoint = sample['points'], sample['refpoint']
+    input = voxelize_input(points, refpoint)
+    return torch.from_numpy(input), torch.from_numpy(refpoint.reshape((1, -1)))
 
 
-test_set = Tooth13Dataset(root=data_dir, mode='test', transform=transform_test)
+def transform_output(heatmaps, refpoints):
+    keypoints = evaluate_keypoints(heatmaps, refpoints)
+    return keypoints
+
+
+class BatchResultCollector():
+    def __init__(self, data_loader, transform_output):
+        self.data_loader = data_loader
+        self.transform_output = transform_output
+        self.samples_num = len(data_loader)
+        self.keypoints = None
+        self.idx = 0
+    
+    def __call__(self, data_batch):
+        inputs_batch, outputs_batch, extra_batch = data_batch
+        outputs_batch = outputs_batch.cpu().numpy()
+        refpoints_batch = extra_batch.cpu().numpy()
+
+        keypoints_batch = self.transform_output(outputs_batch, refpoints_batch)
+
+        if self.keypoints is None:
+            # Initialize keypoints until dimensions awailable now
+            self.keypoints = np.zeros((self.samples_num, *keypoints_batch.shape[1:]))
+
+        batch_size = keypoints_batch.shape[0] 
+        self.keypoints[self.idx:self.idx+batch_size] = keypoints_batch
+        self.idx += batch_size
+
+    def get_result(self):
+        return self.keypoints
+
+
+print('Test on test dataset ..')
+def save_keypoints(filename, keypoints):
+    # Reshape one sample keypoints into one line
+    keypoints = keypoints.reshape(keypoints.shape[0], -1)
+    np.savetxt(filename, keypoints, fmt='%0.4f')
+
+
+test_set = MARAHandDataset(data_dir, center_dir, 'test', test_subject_id, transform_test)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=1, shuffle=False, num_workers=6)
+test_res_collector = BatchResultCollector(test_loader, transform_output)
 
-print('Start test ..')
-keypoints_estimate = test(net, test_loader, output_transform, device, dtype)
-
-test_res_filename = r'./test_res.txt'
-print('Write result to ', test_res_filename)
-# Reshape one sample keypoints in one line
-result = keypoints_estimate.reshape(keypoints_estimate.shape[0], -1)
-np.savetxt(test_res_filename, result, fmt='%0.4f')
+test_epoch(net, test_loader, test_res_collector, device, dtype)
+keypoints_test = test_res_collector.get_result()
+save_keypoints('./test_res.txt', keypoints_test)
 
 
-print('Start save fit ..')
-fit_set = Tooth13Dataset(root=data_dir, mode='train', transform=transform_test)
+print('Fit on train dataset ..')
+fit_set = MARAHandDataset(data_dir, center_dir, 'train', test_subject_id, transform_test)
 fit_loader = torch.utils.data.DataLoader(fit_set, batch_size=1, shuffle=False, num_workers=6)
-keypoints_fit = test(net, fit_loader, output_transform, device=device, dtype=dtype)
-fit_res_filename = r'./fit_res.txt'
-print('Write fit result to ', fit_res_filename)
-fit_result = keypoints_fit.reshape(keypoints_fit.shape[0], -1)
-np.savetxt(fit_res_filename, fit_result, fmt='%0.4f')
+fit_res_collector = BatchResultCollector(fit_loader, transform_output)
+
+test_epoch(net, fit_loader, fit_res_collector, device, dtype)
+keypoints_fit = fit_res_collector.get_result()
+save_keypoints('./fit_res.txt', keypoints_fit)
 
 print('All done ..')

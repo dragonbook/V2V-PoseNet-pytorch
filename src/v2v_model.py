@@ -1,11 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-# TODO:
-# 1. custom weight initialization
-# 2. need bias?
-#
-
 
 class Basic3DBlock(nn.Module):
     def __init__(self, in_planes, out_planes, kernel_size):
@@ -53,28 +48,6 @@ class Pool3DBlock(nn.Module):
     def forward(self, x):
         return F.max_pool3d(x, kernel_size=self.pool_size, stride=self.pool_size)
     
-
-# class Upsample3DBlock(nn.Module):
-#     '''
-#     Note, the original torch implementation can be implemented in pytorch as:
-#     'upsample = nn.ConvTranspose3d(1, 1, kernel_size=2, stride=2, padding=0.5, output_padding=1'
-#     But the padding value is float, and there will be an error in environment pytorch-0.4.1 + python36. Note, It
-#     may work with python2.7?
-#     So, I impelment it with kernel = 3 instead.
-#     '''
-#     def __init__(self, in_planes, out_planes, kernel_size, stride):
-#         super(Upsample3DBlock, self).__init__()
-#         assert(kernel_size == 3)
-#         assert(stride == 2)
-#         self.block = nn.Sequential(
-#             nn.ConvTranspose3d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=1, output_padding=1),
-#             nn.BatchNorm3d(out_planes),
-#             nn.ReLU(True)
-#         )
-
-#     def forward(self, x):
-#         return self.block(x)
-
 
 class Upsample3DBlock(nn.Module):
     def __init__(self, in_planes, out_planes, kernel_size, stride):
@@ -169,4 +142,3 @@ class V2VModel(nn.Module):
             elif isinstance(m, nn.ConvTranspose3d):
                 nn.init.normal_(m.weight, 0, 0.001)
                 nn.init.constant_(m.bias, 0)
-

@@ -33,3 +33,12 @@ def val_epoch(model, criterion, val_loader, device=torch.device('cuda'), dtype=t
             val_loss += loss.item()
             progress_bar(batch_idx, len(val_loader), 'Loss: {0:.4e}'.format(val_loss/(batch_idx+1)))
             #print('loss: {0: .4e}'.format(val_loss/(batch_idx+1)))
+
+
+def test_epoch(model, test_loader, result_collector, device=torch.device('cuda'), dtype=torch.float):
+    model.eval()
+
+    with torch.no_grad():
+        for batch_idx, (inputs, extra) in enumerate(test_loader):
+            outputs = model(inputs.to(device, dtype))
+            result_collector((inputs, outputs, extra))

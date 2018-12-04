@@ -2,13 +2,6 @@ import sys
 import numpy as np
 
 
-# TODO:
-# 1. check class PointsVoxelization
-# 2. np or torch?
-# 3. check resize
-
-
-
 def discretize(coord, cropped_size):
     '''[-1, 1] -> [0, cropped_size]'''
     min_normalized = -1

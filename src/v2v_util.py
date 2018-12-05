@@ -148,8 +148,9 @@ def generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, sizes, d3ou
 
 
 class V2VVoxelization(object):
-    def __init__(self, augmentation=True):
-        self.cubic_size, self.cropped_size, self.original_size = 140, 88, 96
+    def __init__(self, cubic_size, augmentation=True):
+        self.cubic_size = cubic_size
+        self.cropped_size, self.original_size = 88, 96
         self.sizes = (self.cubic_size, self.cropped_size, self.original_size)
         self.pool_factor = 2
         self.std = 1.7

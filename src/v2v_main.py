@@ -54,11 +54,12 @@ data_dir = r'/home/yalong/yalong/dataset/cvpr15_MSRAHandGestureDB'
 center_dir = r'/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/datasets/msra_center/'
 keypoints_num = 21
 test_subject_id = 3
+cubic_size = 200
 
 
 # Transform
-voxelization_train = V2VVoxelization(augmentation=True)
-voxelization_val = V2VVoxelization(augmentation=False)
+voxelization_train = V2VVoxelization(cubic_size=200, augmentation=True)
+voxelization_val = V2VVoxelization(cubic_size=200, augmentation=False)
 
 
 def transform_train(sample):

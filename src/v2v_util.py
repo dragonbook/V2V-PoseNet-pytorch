@@ -81,15 +81,14 @@ def generate_coord(points, refpoint, new_size, angle, trans, sizes):
 
     # discretize
     coord = discretize(coord, cropped_size)  # -> [0, cropped_size]
-    coord += (original_size / 2 - cropped_size / 2) 
+    coord += (original_size / 2 - cropped_size / 2)  # move center to original volume 
 
-    # resize
+    # resize around original volume center
+    resize_scale = new_size / 100
     if new_size < 100:
-        coord = coord / original_size * np.floor(original_size*new_size/100) + \
-                np.floor(original_size/2 - original_size/2*new_size/100)
+        coord = coord * resize_scale + original_size/2 * (1 - resize_scale)
     elif new_size > 100:
-        coord = coord / original_size * np.floor(original_size*new_size/100) - \
-                np.floor(original_size/2*new_size/100 - original_size/2)
+        coord = coord * resize_scale - original_size/2* (resize_scale - 1)
     else:
         # new_size = 100 if it is in test mode
         pass
@@ -97,19 +96,17 @@ def generate_coord(points, refpoint, new_size, angle, trans, sizes):
     # rotation
     if angle != 0:
         original_coord = coord.copy()
-        original_coord[:,1] = original_size-1 - original_coord[:,1]
-        original_coord[:,0] -= (original_size-1)/2
-        original_coord[:,1] -= (original_size-1)/2
+        original_coord[:,0] -= original_size / 2
+        original_coord[:,1] -= original_size / 2
         coord[:,0] = original_coord[:,0]*np.cos(angle) - original_coord[:,1]*np.sin(angle)
         coord[:,1] = original_coord[:,0]*np.sin(angle) + original_coord[:,1]*np.cos(angle)
-        coord[:,0] += (original_size-1)/2
-        coord[:,1] += (original_size-1)/2
-        coord[:,1] = original_size-1 - coord[:,1]
+        coord[:,0] += original_size / 2
+        coord[:,1] += original_size / 2
 
     # translation
     # Note, if trans = (original_size/2 - cropped_size/2), the following translation will
     # cancel the above translation(after discretion). It will be set it when in test mode. 
-    coord -= trans - 1
+    coord -= trans
 
     return coord
 
@@ -176,7 +173,7 @@ class V2VVoxelization(object):
         if not self.augmentation:
             new_size = 100
             angle = 0
-            trans = self.original_size/2 - self.cropped_size/2 + 1
+            trans = self.original_size/2 - self.cropped_size/2
 
         input = generate_cubic_input(points, refpoint, new_size, angle, trans, self.sizes)
         heatmap = generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, self.sizes, self.d3outputs, self.pool_factor, self.std)

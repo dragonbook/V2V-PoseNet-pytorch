@@ -42,3 +42,5 @@ def test_epoch(model, test_loader, result_collector, device=torch.device('cuda')
         for batch_idx, (inputs, extra) in enumerate(test_loader):
             outputs = model(inputs.to(device, dtype))
             result_collector((inputs, outputs, extra))
+
+            progress_bar(batch_idx, len(test_loader))

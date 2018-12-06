@@ -88,7 +88,7 @@ def generate_coord(points, refpoint, new_size, angle, trans, sizes):
     if new_size < 100:
         coord = coord * resize_scale + original_size/2 * (1 - resize_scale)
     elif new_size > 100:
-        coord = coord * resize_scale - original_size/2* (resize_scale - 1)
+        coord = coord * resize_scale - original_size/2 * (resize_scale - 1)
     else:
         # new_size = 100 if it is in test mode
         pass
@@ -168,8 +168,8 @@ class V2VVoxelization(object):
         angle = np.random.rand() * 80/180*np.pi - 40/180*np.pi
 
         # Translation
-        trans = np.random.randint(1, self.original_size-self.cropped_size+1+1, size=3)
-
+        trans = np.random.rand(3) * (self.original_size-self.cropped_size)
+        
         if not self.augmentation:
             new_size = 100
             angle = 0
@@ -181,12 +181,12 @@ class V2VVoxelization(object):
         return input.reshape((1, *input.shape)), heatmap
 
     def voxelize(self, points, refpoint):
-        new_size, angle, trans = 100, 0, self.original_size/2 - self.cropped_size/2 + 1
+        new_size, angle, trans = 100, 0, self.original_size/2 - self.cropped_size/2
         input = generate_cubic_input(points, refpoint, new_size, angle, trans, self.sizes)
         return input.reshape((1, *input.shape))
 
     def generate_heatmap(self, keypoints, refpoint):
-        new_size, angle, trans = 100, 0, self.original_size/2 - self.cropped_size/2 + 1
+        new_size, angle, trans = 100, 0, self.original_size/2 - self.cropped_size/2
         heatmap = generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, self.sizes, self.d3outputs, self.pool_factor, self.std)
         return heatmap
 

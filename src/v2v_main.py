@@ -26,9 +26,12 @@ def parse_args():
 #######################################################################################
 ## Configurations
 print('Warning: disable cudnn for batchnorm first, or just use only cuda instead!')
-np.random.seed(1)
-torch.manual_seed(1)
-torch.cuda.manual_seed(1)
+
+# When we need to resume training, enable randomness to avoid seeing the determinstic
+# (agumented) samples many times.
+# np.random.seed(1)
+# torch.manual_seed(1)
+# torch.cuda.manual_seed(1)
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 dtype = torch.float
@@ -39,19 +42,21 @@ resume_train = args.resume >= 0
 resume_after_epoch = args.resume
 
 save_checkpoint = True
-checkpoint_per_epochs = 5
+checkpoint_per_epochs = 1
 checkpoint_dir = r'./checkpoint'
 
 start_epoch = 0
-epochs_num = 21
+epochs_num = 15
+
+batch_size = 12
 
 
 #######################################################################################
 ## Data, transform, dataset and loader
 # Data
 print('==> Preparing data ..')
-data_dir = r'/home/yalong/yalong/dataset/cvpr15_MSRAHandGestureDB'
-center_dir = r'/home/yalong/yalong/project/KeyPointsEstimation/V2V-PoseNet-pytorch/datasets/msra_center/'
+data_dir = r'/home/maiqi/yalong/dataset/cvpr15_MSRAHandGestureDB'
+center_dir = r'/home/maiqi/yalong/project/KeyPoint/Code/V2V-PoseNet-Rlease-Codes/V2V-PoseNet_RELEASE-hand/data-result/MSRA-result/center'
 keypoints_num = 21
 test_subject_id = 3
 cubic_size = 200
@@ -78,13 +83,13 @@ def transform_val(sample):
 
 # Dataset and loader
 train_set = MARAHandDataset(data_dir, center_dir, 'train', test_subject_id, transform_train)
-train_loader = torch.utils.data.DataLoader(train_set, batch_size=1, shuffle=True, num_workers=6)
+train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=6)
 #train_num = 1
 #train_loader = torch.utils.data.DataLoader(train_set, batch_size=1, shuffle=False, num_workers=6,sampler=ChunkSampler(train_num, 0))
 
 # No separate validation dataset, just use test dataset instead
 val_set = MARAHandDataset(data_dir, center_dir, 'test', test_subject_id, transform_val)
-val_loader = torch.utils.data.DataLoader(val_set, batch_size=1, shuffle=False, num_workers=6)
+val_loader = torch.utils.data.DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=6)
 
 
 #######################################################################################
@@ -159,10 +164,9 @@ def transform_output(heatmaps, refpoints):
 
 
 class BatchResultCollector():
-    def __init__(self, data_loader, transform_output):
-        self.data_loader = data_loader
+    def __init__(self, samples_num, transform_output):
+        self.samples_num = samples_num
         self.transform_output = transform_output
-        self.samples_num = len(data_loader)
         self.keypoints = None
         self.idx = 0
     
@@ -193,8 +197,8 @@ def save_keypoints(filename, keypoints):
 
 
 test_set = MARAHandDataset(data_dir, center_dir, 'test', test_subject_id, transform_test)
-test_loader = torch.utils.data.DataLoader(test_set, batch_size=1, shuffle=False, num_workers=6)
-test_res_collector = BatchResultCollector(test_loader, transform_output)
+test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=6)
+test_res_collector = BatchResultCollector(len(test_set), transform_output)
 
 test_epoch(net, test_loader, test_res_collector, device, dtype)
 keypoints_test = test_res_collector.get_result()
@@ -203,8 +207,8 @@ save_keypoints('./test_res.txt', keypoints_test)
 
 print('Fit on train dataset ..')
 fit_set = MARAHandDataset(data_dir, center_dir, 'train', test_subject_id, transform_test)
-fit_loader = torch.utils.data.DataLoader(fit_set, batch_size=1, shuffle=False, num_workers=6)
-fit_res_collector = BatchResultCollector(fit_loader, transform_output)
+fit_loader = torch.utils.data.DataLoader(fit_set, batch_size=batch_size, shuffle=False, num_workers=6)
+fit_res_collector = BatchResultCollector(len(fit_set), transform_output)
 
 test_epoch(net, fit_loader, fit_res_collector, device, dtype)
 keypoints_fit = fit_res_collector.get_result()

@@ -33,7 +33,7 @@ See code under ./experiments/msra-subject3/ to find more information. The simple
 
 ![msra_s3_acc](/figs/msra_s3_joint_acc.png)
 
-![msra_s3_mean_error](/msra_s3_joint_mean_error.png)
+![msra_s3_mean_error](/figs/msra_s3_joint_mean_error.png)
 
 
 

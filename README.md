@@ -7,6 +7,8 @@ This repository provides
 
 ## Requirements
 * pytorch 0.4.1
+* python 3.6
+* numpy
 
 ### **Warning on pytorch cudnn**:
 Need to disable cudnn for batchnorm, or just only use cuda instead. With cudnn for batchnorm and in float precision, the model cannot train well. My simple experiments show that:

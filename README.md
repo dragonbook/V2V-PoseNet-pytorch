@@ -11,12 +11,12 @@ This repository provides
 * numpy
 
 ### **Warning on pytorch cudnn**:
-Need to disable cudnn for batchnorm, or just only use cuda instead. With cudnn for batchnorm and in float precision, the model cannot train well. My simple experiments show that:
+Need to **disable cudnn for batchnorm**, or just only use cuda instead. With cudnn for batchnorm and in float precision, the model cannot train well. My simple experiments show that:
 
 ```
-cudnn+float: NOT work 
-cudnn+double: work, but slow
-cudnn+float+(disable batchnorm's cudnn): work
+cudnn+float: NOT work(e.g. the loss decreases much slower, and result in a higher loss) 
+cudnn+float+(disable batchnorm's cudnn): work(e.g. the loss decreases faster, and result in a lower loss)
+cudnn+double: work, but the speed is slow
 cuda+(float/double): work, but uses much more memroy
 ```
 

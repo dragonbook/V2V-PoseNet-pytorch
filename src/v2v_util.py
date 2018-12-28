@@ -137,9 +137,9 @@ def generate_heatmap_gt(keypoints, refpoint, new_size, angle, trans, sizes, d3ou
 
     for i in range(coord.shape[0]):
         xi, yi, zi= coord[i]
-        heatmap[i] = np.exp(-(np.power((d3output_x-center_offset-xi)/std, 2)/2 + \
-            np.power((d3output_y-center_offset-yi)/std, 2)/2 + \
-            np.power((d3output_z-center_offset-zi)/std, 2)/2))
+        heatmap[i] = np.exp(-(np.power((d3output_x+center_offset-xi)/std, 2)/2 + \
+            np.power((d3output_y+center_offset-yi)/std, 2)/2 + \
+            np.power((d3output_z+center_offset-zi)/std, 2)/2))
 
     return heatmap
 

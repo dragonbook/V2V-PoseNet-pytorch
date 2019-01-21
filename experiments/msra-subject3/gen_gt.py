@@ -1,4 +1,4 @@
-#%%
+##%%
 import os
 import numpy as np
 import sys
@@ -187,21 +187,21 @@ class MARAHandDataset(Dataset):
         return True
 
 
-#%%
+##%%
 # Generate train_subject3_gt.txt and test_subject3_gt.txt
 data_dir = r'/home/maiqi/yalong/dataset/cvpr15_MSRAHandGestureDB'
 center_dir = r'/home/maiqi/yalong/project/KeyPoint/Code/V2V-PoseNet-Rlease-Codes/V2V-PoseNet_RELEASE-hand/data-result/MSRA-result/center'
 test_subject_id = 3
 
 
-#%%
+##%%
 def save_keypoints(filename, keypoints):
     # Reshape one sample keypoints into one line
     keypoints = keypoints.reshape(keypoints.shape[0], -1)
     np.savetxt(filename, keypoints, fmt='%0.4f')
 
 
-#%%
+##%%
 train_dataset = MARAHandDataset(root=data_dir, center_dir=center_dir, mode='train', test_subject_id=test_subject_id)
 names, joints_world, ref_pts = train_dataset.get_data()
 print('save train reslt ..')
@@ -209,7 +209,7 @@ save_keypoints('./train_s3_gt.txt', joints_world)
 print('done ..')
 
 
-#%%
+##%%
 test_dataset = MARAHandDataset(root=data_dir, center_dir=center_dir, mode='test', test_subject_id=test_subject_id)
 names, joints_world, ref_pts = test_dataset.get_data()
 print('save test reslt ..')

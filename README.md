@@ -1,5 +1,5 @@
 # V2V-PoseNet-pytorch
-This is a pytorch implementation of V2V-PoseNet([V2V-PoseNet: Voxel-to-Voxel Prediction Network for Accurate 3D Hand and Human Pose Estimation from a Single Depth Map](https://arxiv.org/abs/1711.07399)), which is largely based on the author's [torch implementation](https://github.com/mks0601/V2V-PoseNet_RELEASE).
+This is a pytorch implementation of V2V-PoseNet([V2V-PoseNet: Voxel-to-Voxel Prediction Network for Accurate 3D Hand and Human Pose Estimation from a Single Depth Map](https://arxiv.org/abs/1711.07399)), which is largely based on the author's [torch7 implementation](https://github.com/mks0601/V2V-PoseNet_RELEASE).
 
 This repository provides
 * V2V-PoseNet core modules(model, voxelization, ..)
@@ -30,8 +30,31 @@ for pytorch v0.4.1
 sed -i "1254s/torch\.backends\.cudnn\.enabled/False/g" ${PYTORCH}/torch/nn/functional.py
 ```
 
-## About demo on MSRA hand dataset
-See code under ./experiments/msra-subject3/ to find more information. The simple experiment results in about 11mm mean error.
+## MSRA hand dataset demo
+### Usage
+- Clone this repo:
+```
+git clone https://github.com/dragonbook/V2V-PoseNet-pytorch.git
+cd V2V-PoseNet-pytorch
+```
+
+- Download [MSRA hand dataset](https://jimmysuen.github.io/) and extract to directory path/to/msra-hand.
+
+- Download [estimated centers](https://cv.snu.ac.kr/research/V2V-PoseNet/MSRA/center/center.tar.gz) of MSRA hand dataset which required by V2V-PoseNet and provided by the [author's implementation](https://github.com/mks0601/V2V-PoseNet_RELEASE). Extract them to the directory path/to/msra-hand-center. 
+```
+Note, this repository contains a copy of the msra hand centers under ./datasets/msra_center.
+```
+
+- Configure data_dir=path/to/msra-hand and center_dir=path/to/msra-hand-center in ./experiments/msra-subject3/main.py. And Run following command to perform training and testing. It will train the dataset for few epochs and evaluate on the test dataset. The test result will be saved as test_res.txt and the fit result on training data will be saved as fit_res.txt
+```
+PYTHONPATH=./ python ./experiments/msra-subject3/main.py
+```
+
+- Configure data_dir=path/to/msra-hand and center_dir=path/to/msra-hand-center in ./experiments/msra-subject3/gen_gt.py. Run it to generate ground truth labels as train_s3_gt.txt and test_s3_gt.txt
+
+- Configure pred_file=path/to/test_s3_gt.txt and gt_file=path/to/test_res.txt in ./experiments/msra-subject3/show_acc.py. Run it to plot accuracy and error.
+
+- The following figures show that the simple experiment can result in about 11mm mean error.
 
 ![msra_s3_acc](/figs/msra_s3_joint_acc.png)
 

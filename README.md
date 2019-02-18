@@ -6,12 +6,12 @@ This repository provides
 * An experiment demo on MSRA hand pose dataset
 
 ## Requirements
-* pytorch 0.4.1
+* pytorch 0.4.1 or pytorch 1.0
 * python 3.6
 * numpy
 
-### **Warning on pytorch cudnn**:
-Need to **disable cudnn for batchnorm**, or just only use cuda instead. With cudnn for batchnorm and in float precision, the model cannot train well. My simple experiments show that:
+### **Warning on pytorch0.4.1 cudnn**:
+May need to **disable cudnn for batchnorm**, or just only use cuda instead. With cudnn for batchnorm and in float precision, the model cannot train well. My simple experiments show that:
 
 ```
 cudnn+float: NOT work(e.g. the loss decreases much slower, and result in a higher loss) 

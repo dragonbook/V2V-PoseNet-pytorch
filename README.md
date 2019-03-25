@@ -65,9 +65,11 @@ PYTHONPATH=./ python ./experiments/msra-subject3/main.py
 ## Additional [IntegralPose](https://arxiv.org/abs/1711.08229)/[PoseFix](https://arxiv.org/abs/1812.03595) style loss implementation
 Replaced V2V-PoseNet's loss with PoseFix's loss(one-hot heatmap loss + L1 coord loss), and it's independently implemented under ./integral-pose directory. Also, configure data_dir and center_dir in ./integral-pose/main.py, and start training. The result shows about 10mm mean error.
 
-![msra_s3_acc](/figs/integral_pose_msra_s3_joint_acc.png)
+![integral_loss_s3_acc](/figs/integral_pose_msra_s3_joint_acc.png)
 
-![msra_s3_mean_error](/figs/integral_pose_msra_s3_joint_mean_error.png)
+![integral_loss_mean_error](/figs/integral_pose_msra_s3_joint_mean_error.png)
+
+![compare_mean_error](/figs/mean_error_compare.png)
 
 # Below is from author's README for reference
 # V2V-PoseNet: Voxel-to-Voxel Prediction Network for Accurate 3D Hand and Human Pose Estimation from a Single Depth Map

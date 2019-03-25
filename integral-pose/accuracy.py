@@ -49,3 +49,11 @@ def compute_mean_err(pred, gt):
     N, K = pred.shape[0], pred.shape[1]
     err_dist = np.sqrt(np.sum((pred - gt)**2, axis=2))  # (N, K)
     return np.mean(err_dist, axis=0)
+
+
+def compute_dist_err(pred, gt):
+    '''
+    pred: (N, K, 3)
+    return: (N, K)
+    '''
+    return np.sqrt(np.sum((pred - gt)**2, axis=2))

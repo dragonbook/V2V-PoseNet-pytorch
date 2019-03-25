@@ -4,6 +4,7 @@ This is a pytorch implementation of V2V-PoseNet([V2V-PoseNet: Voxel-to-Voxel Pre
 This repository provides
 * V2V-PoseNet core modules(model, voxelization, ..)
 * An experiment demo on MSRA hand pose dataset
+* *Additional [Integral Pose Loss](https://arxiv.org/abs/1711.08229) (or [PoseFix Loss](https://arxiv.org/abs/1812.03595)) implementation*
 
 ## Requirements
 * pytorch 0.4.1 or pytorch 1.0
@@ -60,6 +61,13 @@ PYTHONPATH=./ python ./experiments/msra-subject3/main.py
 
 ![msra_s3_mean_error](/figs/msra_s3_joint_mean_error.png)
 
+
+## Additional [IntegralPose](https://arxiv.org/abs/1711.08229)/[PoseFix](https://arxiv.org/abs/1812.03595) style loss implementation
+It's indepently implemented under ./integral-pose directory. Also, configure data_dir and center_dir in ./integral-pose/main.py, and start training. The result shows about 10mm mean error.
+
+![msra_s3_mean_error](/figs/integral_pose_msra_s3_joint_mean_error.png)
+
+![msra_s3_acc](/figs/integral_pose_msra_s3_joint_acc.png)
 
 
 # Below is from author's README for reference

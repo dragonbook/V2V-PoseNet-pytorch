@@ -3,8 +3,8 @@ This is a pytorch implementation of V2V-PoseNet([V2V-PoseNet: Voxel-to-Voxel Pre
 
 This repository provides
 * V2V-PoseNet core modules(model, voxelization, ..)
-* An experiment demo on MSRA hand pose dataset
-* *Additional [Integral Pose Loss](https://arxiv.org/abs/1711.08229) (or [PoseFix Loss](https://arxiv.org/abs/1812.03595)) implementation*
+* An experiment demo on MSRA hand pose dataset, result in ~11mm mean error.
+* *Additional [Integral Pose Loss](https://arxiv.org/abs/1711.08229) (or [PoseFix Loss](https://arxiv.org/abs/1812.03595)) implementation*, result in ~10mm mean error on the same demo.
 
 ## Requirements
 * pytorch 0.4.1 or pytorch 1.0
